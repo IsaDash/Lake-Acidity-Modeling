@@ -1,0 +1,65 @@
+---
+title: "Lake Acidity Modeling"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Modeling Acidity (pH levels) of bodies of water 
+
+
+```{r}
+acid_data = read.csv("lake_data_cleaned.csv")
+data.frame(acid_data)
+```
+##Multiple linear regression
+test out various hypotheses on single variable regressiioon, and multiple linear reg
+
+##violations of assumptions (linearity, constant variation, normality of errors, interaction)
+
+```{r}
+
+acid_no3 = lm(PH_LAB..PH.Level. ~ NO3_UEQ_L..Nitrate., data=acid_data)
+plot(PH_LAB..PH.Level. ~ NO3_UEQ_L..Nitrate., col="red", data=acid_data)
+abline(acid_no3)
+
+```
+The above plot shows a linear model with pH level as the response variable and NO3 as the only predictor variable. It does not look like a good fit. We can explore the following violations:
+
+linearity and constant variance
+```{r}
+plot(fitted(acid_no3), resid(acid_no3), col = "grey", pch = 20,
+     xlab = "Fitted", ylab = "Residuals", main = "Fitted versus Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+```
+Clearly, we observe from the linear regression plot and Residuals vs Fitted plot that we violate linearity and constant variance.
+
+```{r}
+library(lmtest)
+bptest(acid_no3)
+```
+Using the Breusch-Pagan test, we confirm that constant variance is violated because our p-value is very small. Therefore, we reject our null hypothesis, meaning the error does not have constant variance.
+
+```{r}
+par(mfrow=c(1,2))
+hist(resid(acid_no3), xlab= "Residuals", main= "Histogram of Residuals", col= "blue")
+qqnorm(resid(acid_no3), main = "Normal Q-Q Plot", col = "red")
+qqline(resid(acid_no3), col = "green", lwd = 2)
+```
+
+##linear regression comparison (ANOVA) ISA
+
+##polynomial regression ETHAN
+test out various hypotheses on single variable regresion, and multiple linear reg
+
+##violations of assumptions (linearity, constant variation, normality of errors, interaction, outliers (cooks)) ISA
+##choose variables using aic, bic, adjusted r^2 CAITLYN
+
+##polynomial regression comparison (ANOVA) ETHAN
+
+##Transformations ch 14 ETHAN
+
+
+
