@@ -8,13 +8,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Modeling Acidity (pH levels) of bodies of water 
-
-
+```{r}
+library(faraway)
+library(lmtest)
+library(leaps)
+acid_data = read.csv("lake_data_cleaned.csv")
+```
 ```{r}
 acid_data = read.csv("lake_data_cleaned.csv")
 data.frame(acid_data)
 ```
-##Multiple linear regression
+##Multiple linear regression (collinearity, VIF,)
 test out various hypotheses on single variable regressiioon, and multiple linear reg
 
 ##violations of assumptions (linearity, constant variation, normality of errors, interaction)
@@ -55,7 +59,117 @@ qqline(resid(acid_no3), col = "green", lwd = 2)
 test out various hypotheses on single variable regresion, and multiple linear reg
 
 ##violations of assumptions (linearity, constant variation, normality of errors, interaction, outliers (cooks)) ISA
-##choose variables using aic, bic, adjusted r^2 CAITLYN
+
+
+###Variable Selection
+     
+#Using Backward Search
+```{r}
+acid_model = lm(PH_LAB..PH.Level. ~ . , data= acid_data)
+backward_aic = step(acid_model, direction="backward", trace = 0)
+backward_aic
+```
+```{r}
+backward_bic = step(acid_model, direction="backward", k = log(length(resid(acid_model))), trace = 0)
+backward_bic
+```
+     
+Comparing the AIC and BIC Model with a level of $\alpha =  0.10$.
+```{r}
+anova(backward_bic, backward_aic)
+```
+Test Statistic: F = 4.139      
+Distribution: On 2 P-Value = 0.01595.     
+Decision: pvalue < alpha, we reject the null hypothesis and we choose the backward_aic model.
+         
+We can also compare the values of adjusted $R^2$ to figure out which is the "best" model. 
+```{r}
+summary(backward_aic)$adj.r.squared # 0.8030164
+summary(backward_bic)$adj.r.squared # 0.802968
+```
+Comparing these $R^2$ model, we that the backward_aic model has a slightly higher adjusted $R^2$ value, so it will be the better model in this case. This is consistent with our anova test as well.     
+     
+#Using Forward Search: 
+```{r}
+acid_model_start = lm(PH_LAB..PH.Level. ~ 1 , data= acid_data)
+forward_aic = step(acid_model_start, scope = PH_LAB..PH.Level. ~ ANC_UEQ_L..Acid.Neutralizing.Capacity. + CA_UEQ_L..Calcium. + CL_UEQ_L..Chloride. + COND_UM_CM..Conductivity.+K_UEQ_L..potassium.+ MG_UEQ_L..magnesium.+NA_UEQ_L..sodium.+ NH4_UEQ_L..Amonium.+NO3_UEQ_L..Nitrate.+SIO2_MG_L..silicon.dioxicde.+SO4_UEQ_L..sulfate.+WATERBODY_TYPE, direction="forward", trace = 0)
+forward_aic
+```
+```{r}
+forward_bic = step(acid_model_start, scope = PH_LAB..PH.Level. ~ ANC_UEQ_L..Acid.Neutralizing.Capacity. + CA_UEQ_L..Calcium. + CL_UEQ_L..Chloride. + COND_UM_CM..Conductivity.+K_UEQ_L..potassium.+ MG_UEQ_L..magnesium.+NA_UEQ_L..sodium.+ NH4_UEQ_L..Amonium.+NO3_UEQ_L..Nitrate.+SIO2_MG_L..silicon.dioxicde.+SO4_UEQ_L..sulfate.+WATERBODY_TYPE, direction="forward", k = log(length(resid(acid_model))), trace = 0)
+forward_bic
+```
+        
+Comparing the AIC and BIC Model with a level of $\alpha =  0.10$.
+```{r}
+anova(forward_bic, forward_aic)
+```
+Test Statistic: F = 4.139    
+Distribution: On 2 P-Value = 0.01595   
+Decision: pvalue < alpha, we reject the null hypothesis and we choose the forward_aic model.
+        
+We can also compare the values of adjusted $R^2$ to figure out which is the "best" model. 
+```{r}
+summary(forward_aic)$adj.r.squared # 0.8030164
+summary(forward_bic)$adj.r.squared # 0.802968
+```
+Comparing these $R^2$ model, we that the forward_aic model has a slightly higher adjusted $R^2$ value, so it will be the better model in this case. This is consistent with the anova test. 
+
+#Stepwise Search
+```{r}
+acid_model_start = lm(PH_LAB..PH.Level. ~ 1 , data= acid_data)
+both_aic = step(acid_model_start, scope = PH_LAB..PH.Level. ~ ANC_UEQ_L..Acid.Neutralizing.Capacity. + CA_UEQ_L..Calcium. + CL_UEQ_L..Chloride. + COND_UM_CM..Conductivity.+K_UEQ_L..potassium.+ MG_UEQ_L..magnesium.+NA_UEQ_L..sodium.+ NH4_UEQ_L..Amonium.+NO3_UEQ_L..Nitrate.+SIO2_MG_L..silicon.dioxicde.+SO4_UEQ_L..sulfate.+WATERBODY_TYPE, direction="both", trace = 0)
+both_aic
+```
+```{r}
+both_bic = step(acid_model_start, scope = PH_LAB..PH.Level. ~ ANC_UEQ_L..Acid.Neutralizing.Capacity. + CA_UEQ_L..Calcium. + CL_UEQ_L..Chloride. + COND_UM_CM..Conductivity.+K_UEQ_L..potassium.+ MG_UEQ_L..magnesium.+NA_UEQ_L..sodium.+ NH4_UEQ_L..Amonium.+NO3_UEQ_L..Nitrate.+SIO2_MG_L..silicon.dioxicde.+SO4_UEQ_L..sulfate.+WATERBODY_TYPE, direction="both", k = log(length(resid(acid_model))), trace = 0)
+both_bic
+```
+    
+Using anova to compare these models with $\alpha= 0.10$
+```{r}
+anova(both_bic, both_aic)
+```
+Test Statistic: F = 4.139    
+Distribution: On 2 P-Value = 0.01595   
+Decision: pvalue < alpha, we reject the null hypothesis and we choose the both_aic model.
+      
+We can also compare $R^2$ values: 
+```{r}
+summary(both_aic)$adj.r.squared # 0.8030164
+summary(both_bic)$adj.r.squared # 0.802968
+```
+The $R^2$ values for both_aic is slightly higher, thus a better model than the both_bic model. We choose the both_aic model. 
+       
+As we can see with both Backward, forward and stepwise search we ultimately find that the AIC model is better than the BIC model. Let's look at the violation of assumptions for both the AIC and BIC model using the results from the backward search (though regardless of the method we did, all three search methods ultimately had the same $R^2$ values and coefficients values.)
+     
+Let's find the model with the **best** AIC: 
+```{r}
+acid_model = lm(PH_LAB..PH.Level. ~ . , data= acid_data)
+all_acid_model = summary(regsubsets(PH_LAB..PH.Level. ~ ., data = acid_data))
+n = length(resid(acid_model))
+p = length(coef(acid_model))
+acid_mod_aic = n * log(all_acid_model$rss / n) + 2 * (2:p)
+best_aic_ind = which.min(acid_mod_aic)
+all_acid_model$which[best_aic_ind,]
+```
+From this, we can see that Acid Neutralizing Capacity, Calcium, Conductivity, Potassium, Magnesium, Sodium, Amonium, and Sulfate are the best predictors to use. 
+```{r}
+best_aic_model = lm(PH_LAB..PH.Level. ~ ANC_UEQ_L..Acid.Neutralizing.Capacity. + CA_UEQ_L..Calcium.+COND_UM_CM..Conductivity. + K_UEQ_L..potassium. + MG_UEQ_L..magnesium.+   NA_UEQ_L..sodium. + NH4_UEQ_L..Amonium. +    SO4_UEQ_L..sulfate. , data = acid_data)
+summary(best_aic_model)$adj.r.squared # 0.8026063
+```
+
+```{r}
+calc_loocv_rmse = function(model) {
+  sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
+}
+
+calc_loocv_rmse(best_aic_model) #0.3359839
+calc_loocv_rmse(backward_aic) #0.3358015
+```
+We would want to use the model with the lowest RMSE, which in this case will be the backward_aic model. 
+
+
 
 ##polynomial regression comparison (ANOVA) ETHAN
 
