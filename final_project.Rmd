@@ -154,6 +154,7 @@ best_aic_ind = which.min(acid_mod_aic)
 all_acid_model$which[best_aic_ind,]
 ```
 From this, we can see that Acid Neutralizing Capacity, Calcium, Conductivity, Potassium, Magnesium, Sodium, Amonium, and Sulfate are the best predictors to use. 
+         
 ```{r}
 best_aic_model = lm(PH_LAB..PH.Level. ~ ANC_UEQ_L..Acid.Neutralizing.Capacity. + CA_UEQ_L..Calcium.+COND_UM_CM..Conductivity. + K_UEQ_L..potassium. + MG_UEQ_L..magnesium.+   NA_UEQ_L..sodium. + NH4_UEQ_L..Amonium. +    SO4_UEQ_L..sulfate. , data = acid_data)
 summary(best_aic_model)$adj.r.squared # 0.8026063
