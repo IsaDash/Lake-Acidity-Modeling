@@ -141,7 +141,7 @@ summary(both_bic)$adj.r.squared # 0.802968
 ```
 The $R^2$ values for both_aic is slightly higher, thus a better model than the both_bic model. We choose the both_aic model. 
        
-As we can see with both Backward, forward and stepwise search we ultimately find that the AIC model is better than the BIC model. Let's look at the violation of assumptions for both the AIC and BIC model using the results from the backward search (though regardless of the method we did, all three search methods ultimately had the same $R^2$ values and coefficients values.)
+As we can see with both Backward, forward and stepwise search we ultimately find that the AIC model is better than the BIC model.   
      
 Let's find the model with the **best** AIC: 
 ```{r}
@@ -169,6 +169,78 @@ calc_loocv_rmse(best_aic_model) #0.3359839
 calc_loocv_rmse(backward_aic) #0.3358015
 ```
 We would want to use the model with the lowest RMSE, which in this case will be the backward_aic model. 
+
+
+###Categorial Variables 
+We see from our dataset that the waterbody type can be of two types: Lake or Stream. 
+
+```{r}
+is.factor(acid_data$WATERBODY_TYPE) #false
+#coerce it to be a factor
+acid_factor = factor(acid_data$WATERBODY_TYPE)
+numeric_vec_type = as.numeric(acid_factor)
+```
+
+Let's visualize the PH Level vs Conductivity for Lakes and Streams by plotting a scatterplot.  
+```{r}
+plot(PH_LAB..PH.Level.~COND_UM_CM..Conductivity. , data = acid_data, col = acid_factor)
+legend("topright", c("Lake", "Stream"), col = c(1,2), pch = c(1, 1))
+```
+        
+We see that both lake and stream have similar levels of conductivity where most values are around 10 - 40 UM. However, we see a bit more variance for stream with some of the observations having values of higher than 40 UM for conductivity. 
+
+Out of curiosity, let's plot PH Level vs Potassium Levels for Lakes and Streams
+```{r}
+plot(PH_LAB..PH.Level.~ K_UEQ_L..potassium.  , data = acid_data, col = acid_factor)
+legend("topright", c("Lake", "Stream"), col = c(1,2), pch = c(1, 1))
+```
+       
+We see that the stream has more varied levels of potassium than the lake. The potassium levels for Lake spans from around 0 - 25 UEQ. However, the potassium levels for Stream spans from around 0 - 60 UEQ. It seems like most lakes have around the same levels of potassium. 
+
+```{r}
+plot(PH_LAB..PH.Level.~ K_UEQ_L..potassium.  , data = acid_data, col = acid_factor)
+legend("topright", c("Lake", "Stream"), col = c(1,2), pch = c(1, 1))
+```
+
+Looking at these scatterplots, let's fit a interaction multiple regression model with PH levels as the response and Conductivity as the predictor since there seems to be more variance with conductivity. 
+```{r}
+interaction_model = lm(PH_LAB..PH.Level. ~COND_UM_CM..Conductivity. * WATERBODY_TYPE , data = acid_data)
+plot(PH_LAB..PH.Level.~COND_UM_CM..Conductivity. , data = acid_data, col = acid_factor)
+legend("topright", c("Lake", "Stream"), col = c(1,2), pch = c(1, 1))
+
+#getting coefficients and slope
+coefficients_int = summary(interaction_model)$coef[,1]
+coefficients_int
+lake_intercept = coefficients_int[1]
+stream_intercept = coefficients_int[1] + coefficients_int[3]
+lake_slope = coefficients_int[2]
+stream_slope = coefficients_int[2] + coefficients_int[4]
+
+#regression lines
+abline(lake_intercept, lake_slope, lwd = 2, col = "black")
+abline(stream_intercept, stream_slope, lwd = 2, col = "red")
+```
+Fitting an Additive Model: 
+```{r}
+additive_model = lm(PH_LAB..PH.Level. ~COND_UM_CM..Conductivity.+WATERBODY_TYPE , data = acid_data)
+plot(PH_LAB..PH.Level.~COND_UM_CM..Conductivity. , data = acid_data, col = acid_factor)
+legend("topright", c("Lake", "Stream"), col = c(1,2), pch = c(1, 1))
+
+coefficients = summary(additive_model)$coef[,1]
+lake_intercept = coefficients[1]
+stream_intercept = coefficients[1] + coefficients[3]
+slope = coefficients[2]
+
+abline(lake_intercept, slope, lwd = 2, col = "black")
+abline(stream_intercept, slope, lwd = 2, col = "red")
+```
+Let's see if the SLR Model or the interaction model is more accurate. 
+```{r}
+anova(additive_model, interaction_model)
+```
+Test Stat: F = 12.684    
+P value: 0.0003695  
+Decision: p value < alpha = 0.10, so we reject the null hypothesis and say that the interaction model best models PH and Conductivity. 
 
 
 
